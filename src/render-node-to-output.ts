@@ -1,3 +1,4 @@
+import stringWidth from 'string-width';
 import widestLine from 'widest-line';
 import indentString from 'indent-string';
 import Yoga from 'yoga-layout';
@@ -31,20 +32,48 @@ export type OutputTransformer = (s: string, index: number) => string;
 
 export const renderNodeToScreenReaderOutput = (
 	node: DOMElement,
+	output: Output,
+	context: {x: number; y: number},
 	options: {
 		parentRole?: string;
-	} = {},
-): string => {
-	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
-		return '';
+		skipStaticElements: boolean;
+	},
+) => {
+	if (options.skipStaticElements && node.internal_static) {
+		return;
 	}
 
-	let output = '';
+	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
+		return;
+	}
+
+	if (node.internal_accessibility) {
+		const {role, state} = node.internal_accessibility;
+
+		if (role && role !== options.parentRole) {
+			const text = `${role}: `; 
+			output.write(context.x, context.y, text, {transformers: []});
+			context.x += stringWidth(text);
+		}
+
+		if (state) {
+			const stateKeys = Object.keys(state) as Array<keyof typeof state>;
+			const stateDescription = stateKeys.filter(key => state[key]).join(', ');
+
+			if (stateDescription) {
+				const text = `(${stateDescription}) `;
+				output.write(context.x, context.y, text, {transformers: []});
+				context.x += stringWidth(text);
+			}
+		}
+	}
 
 	if (node.nodeName === 'ink-text') {
-		output = squashTextNodes(node);
+		const text = squashTextNodes(node);
+		output.write(context.x, context.y, text, {transformers: []});
+		context.x += stringWidth(text);
 	} else if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
-		const separator = 
+		const separator =
 			node.style.flexDirection === 'row' ||
 			node.style.flexDirection === 'row-reverse'
 				? ' '
@@ -56,42 +85,32 @@ export const renderNodeToScreenReaderOutput = (
 				? [...node.childNodes].reverse()
 				: [...node.childNodes];
 
-		output = childNodes
-			.map(childNode => {
-				const screenReaderOutput = renderNodeToScreenReaderOutput(
-					childNode as DOMElement,
-					{
-						parentRole: node.internal_accessibility?.role,
-					},
-				);
+		for (const [
+			index,
+			childNode,
+		] of childNodes.entries()) {
+			renderNodeToScreenReaderOutput(
+				childNode as DOMElement,
+				output,
+				context,
+				{
+					parentRole: node.internal_accessibility?.role,
+					skipStaticElements: options.skipStaticElements,
+				},
+			);
 
-				// When a text node contains multiple lines, it's still a single text node.
-				// We need to split it into lines and then join them with the separator.
-				return screenReaderOutput.split('\n').join(separator);
-			})
-			.filter(Boolean)
-			.join(separator);
-	}
+			if (index < childNodes.length - 1) {
+				output.write(context.x, context.y, separator, {transformers: []});
 
-
-	if (node.internal_accessibility) {
-		const {role, state} = node.internal_accessibility;
-
-		if (state) {
-			const stateKeys = Object.keys(state) as Array<keyof typeof state>;
-			const stateDescription = stateKeys.filter(key => state[key]).join(', ');
-
-			if (stateDescription) {
-				output = `(${stateDescription}) ${output}`;
+				if (separator === '\n') {
+					context.y++;
+					context.x = 0;
+				} else {
+					context.x += stringWidth(separator);
+				}
 			}
 		}
-
-		if (role && role !== options.parentRole) {
-			output = `${role}: ${output}`;
-		}
 	}
-
-	return output;
 };
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
