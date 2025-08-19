@@ -44,7 +44,7 @@ export const renderNodeToScreenReaderOutput = (
 	if (node.nodeName === 'ink-text') {
 		output = squashTextNodes(node);
 	} else if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
-		const separator =
+		const separator = 
 			node.style.flexDirection === 'row' ||
 			node.style.flexDirection === 'row-reverse'
 				? ' '
@@ -72,6 +72,7 @@ export const renderNodeToScreenReaderOutput = (
 			.filter(Boolean)
 			.join(separator);
 	}
+
 
 	if (node.internal_accessibility) {
 		const {role, state} = node.internal_accessibility;

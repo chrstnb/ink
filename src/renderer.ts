@@ -13,7 +13,16 @@ type Result = {
 const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 	if (node.yogaNode) {
 		if (isScreenReaderEnabled) {
-			const output = renderNodeToScreenReaderOutput(node);
+			const regularOutput = renderNodeToScreenReaderOutput(node);
+
+			const staticOutput = node.staticNode
+				? renderNodeToScreenReaderOutput(node.staticNode)
+				: '';
+
+			const output = staticOutput
+				? `${staticOutput}\n${regularOutput}`
+				: regularOutput;
+
 			const outputHeight = output === '' ? 0 : output.split('\n').length;
 
 			return {
