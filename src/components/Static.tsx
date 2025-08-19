@@ -1,5 +1,6 @@
 import React, {useMemo, useState, useLayoutEffect, type ReactNode} from 'react';
 import {type Styles} from '../styles.js';
+import useIsScreenReaderEnabled from '../hooks/use-is-screen-reader-enabled.js';
 
 export type Props<T> = {
 	/**
@@ -35,10 +36,15 @@ export type Props<T> = {
 export default function Static<T>(props: Props<T>) {
 	const {items, children: render, style: customStyle} = props;
 	const [index, setIndex] = useState(0);
+	const isScreenReaderEnabled = useIsScreenReaderEnabled();
 
 	const itemsToRender: T[] = useMemo(() => {
+		if (isScreenReaderEnabled) {
+			return [];
+		}
+
 		return items.slice(index);
-	}, [items, index]);
+	}, [index, items, isScreenReaderEnabled]);
 
 	useLayoutEffect(() => {
 		setIndex(items.length);

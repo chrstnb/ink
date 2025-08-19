@@ -187,12 +187,6 @@ export default class Ink {
 			return;
 		}
 
-		if (this.isScreenReaderEnabled) {
-			this.options.stdout.write(ansiEscapes.clearTerminal + output);
-			this.options.stdout.write("HERE");
-			return;
-		}
-
 		if (hasStaticOutput) {
 			this.fullStaticOutput += staticOutput;
 		}

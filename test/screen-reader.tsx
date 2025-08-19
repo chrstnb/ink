@@ -1,6 +1,6 @@
 import test from 'ava';
 import React from 'react';
-import {Box, Text} from '../src/index.js';
+import {Box, Text, Static, render} from '../src/index.js';
 import {renderToString} from './helpers/render-to-string.js';
 
 test('render text for screen readers', t => {
@@ -94,7 +94,7 @@ test('render aria-label only Box for screen readers', t => {
 test('omit ANSI styling in screen-reader output', t => {
 	const output = renderToString(
 		<Box>
-			{/* eslint-disable-next-line react/jsx-sort-props */}
+			{/* eslint-disable-next-line react/jsx-sort-props */} 
 			<Text bold color="green" inverse underline>
 				Styled content
 			</Text>
@@ -345,4 +345,93 @@ test('render listbox with multiselectable options', t => {
 		output,
 		'listbox: (multiselectable) option: (selected) Option 1\noption: Option 2\noption: (selected) Option 3',
 	);
+});
+
+test('render nested lists', t => {
+	const output = renderToString(
+		<Box flexDirection="column" aria-role="list">
+			<Box aria-role="listitem">
+				<Text>Item 1</Text>
+				<Box flexDirection="column" aria-role="list">
+					<Box aria-role="listitem">
+						<Text>Nested Item 1</Text>
+					</Box>
+					<Box aria-role="listitem">
+						<Text>Nested Item 2</Text>
+					</Box>
+				</Box>
+			</Box>
+			<Box aria-role="listitem">
+				<Text>Item 2</Text>
+			</Box>
+		</Box>,
+		{
+			isScreenReaderEnabled: true,
+		},
+	);
+
+	t.is(
+		output,
+		'list: listitem: Item 1\nlist: listitem: Nested Item 1\nlistitem: Nested Item 2\nlistitem: Item 2',
+	);
+});
+
+test('render nested lists with aria-label', t => {
+	const output = renderToString(
+		<Box flexDirection="column" aria-role="list" aria-label="My List">
+			<Box aria-role="listitem">
+				<Text>Item 1</Text>
+				<Box
+					flexDirection="column"
+					aria-role="list"
+					aria-label="My Nested List"
+				>
+					<Box aria-role="listitem">
+						<Text>Nested Item 1</Text>
+					</Box>
+					<Box aria-role="listitem">
+						<Text>Nested Item 2</Text>
+					</Box>
+				</Box>
+			</Box>
+			<Box aria-role="listitem">
+				<Text>Item 2</Text>
+			</Box>
+		</Box>,
+		{
+			isScreenReaderEnabled: true,
+		},
+	);
+
+	t.is(
+		output,
+		'list: My List: listitem: Item 1\nlist: My Nested List: listitem: Nested Item 1\nlistitem: Nested Item 2\nlistitem: Item 2',
+	);
+});
+
+test('static output is not repeated', t => {
+	const items = ['A', 'B', 'C'];
+
+	const {rerender, output} = render(
+		<Static items={items}>
+			{item => (
+				<Text key={item}>{item}</Text>
+			)}
+		</Static>,
+		{
+			isScreenReaderEnabled: true,
+		},
+	);
+
+	t.is(output.lastFrame(), 'A\nB\nC');
+
+	rerender(
+		<Static items={[...items, 'D']}>
+			{item => (
+				<Text key={item}>{item}</Text>
+			)}
+		</Static>,
+	);
+
+	t.is(output.lastFrame(), 'A\nB\nC\nD');
 });
