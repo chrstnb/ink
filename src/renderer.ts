@@ -13,48 +13,21 @@ type Result = {
 const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 	if (node.yogaNode) {
 		if (isScreenReaderEnabled) {
-			const output = new Output({
-				width: node.yogaNode.getComputedWidth(),
-				height: node.yogaNode.getComputedHeight(),
-			});
+			const regularOutput = renderNodeToScreenReaderOutput(node);
 
-			renderNodeToScreenReaderOutput(
-				node,
-				output,
-				{x: 0, y: 0},
-				{
-					skipStaticElements: true,
-				},
-			);
+			const staticOutput = node.staticNode
+				? renderNodeToScreenReaderOutput(node.staticNode)
+				: '';
 
-			let staticOutput;
-			let staticOutputString = '';
+			const output = staticOutput
+				? `${staticOutput}\n${regularOutput}`
+				: regularOutput;
 
-			if (node.staticNode?.yogaNode) {
-				staticOutput = new Output({
-					width: node.staticNode.yogaNode.getComputedWidth(),
-					height: node.staticNode.yogaNode.getComputedHeight(),
-				});
-
-				renderNodeToScreenReaderOutput(
-					node.staticNode,
-					staticOutput,
-					{x: 0, y: 0},
-					{
-						skipStaticElements: false,
-					},
-				);
-				staticOutputString = staticOutput.get().output.trim();
-			}
-
-			const mainOutputString = output.get().output.trim();
-			const combinedOutput = staticOutputString
-				? `${staticOutputString}\n${mainOutputString}`
-				: mainOutputString;
+			const outputHeight = output === '' ? 0 : output.split('\n').length;
 
 			return {
-				output: combinedOutput,
-				outputHeight: combinedOutput.split('\n').length,
+				output,
+				outputHeight,
 				staticOutput: '',
 			};
 		}
@@ -98,6 +71,5 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 		staticOutput: '',
 	};
 };
-
 
 export default renderer;
