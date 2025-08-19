@@ -9,7 +9,6 @@ import patchConsole from 'patch-console';
 import {LegacyRoot} from 'react-reconciler/constants.js';
 import {type FiberRoot} from 'react-reconciler';
 import Yoga from 'yoga-layout';
-import wrapAnsi from 'wrap-ansi';
 import reconciler from './reconciler.js';
 import render from './renderer.js';
 import * as dom from './dom.js';
@@ -189,27 +188,7 @@ export default class Ink {
 		}
 
 		if (this.isScreenReaderEnabled) {
-			if (output === this.lastOutput) {
-				return;
-			}
-
-			const terminalWidth = this.options.stdout.columns || 80;
-
-			const wrappedOutput = wrapAnsi(output, terminalWidth, {
-				trim: false,
-				hard: true,
-			});
-
-			const erase =
-				this.lastOutputHeight > 0
-					? ansiEscapes.eraseLines(this.lastOutputHeight)
-					: '';
-
-			this.options.stdout.write(erase + wrappedOutput);
-
-			this.lastOutput = output;
-			this.lastOutputHeight =
-				wrappedOutput === '' ? 0 : wrappedOutput.split('\n').length;
+			this.options.stdout.write(ansiEscapes.clearTerminal + output);
 			return;
 		}
 
