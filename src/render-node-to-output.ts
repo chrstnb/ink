@@ -33,8 +33,16 @@ export const renderNodeToScreenReaderOutput = (
 	node: DOMElement,
 	options: {
 		parentRole?: string;
-	} = {},
+		skipStaticElements?: boolean;
+		renderCount: {value: number};
+		childIndex: number;
+	},
 ): string => {
+	options.renderCount.value++;
+	if (options.skipStaticElements && node.internal_static) {
+		return '';
+	}
+
 	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
 		return '';
 	}
@@ -57,11 +65,14 @@ export const renderNodeToScreenReaderOutput = (
 				: [...node.childNodes];
 
 		output = childNodes
-			.map(childNode => {
+			.map((childNode, index) => {
 				const screenReaderOutput = renderNodeToScreenReaderOutput(
 					childNode as DOMElement,
 					{
 						parentRole: node.internal_accessibility?.role,
+						skipStaticElements: options.skipStaticElements,
+						renderCount: options.renderCount,
+						childIndex: index,
 					},
 				);
 
@@ -90,8 +101,10 @@ export const renderNodeToScreenReaderOutput = (
 		}
 	}
 
-	return output;
+	const metadata = ` [index:${options.childIndex}, type:${node.nodeName}]`;
+	return `${output}${metadata}`;
 };
+
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
 const renderNodeToOutput = (
