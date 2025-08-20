@@ -337,7 +337,7 @@ export default class Ink {
 		}
 	}
 
-	await waitUntilExit(): Promise<void> {
+	async waitUntilExit(): Promise<void> {
 		this.exitPromise ||= new Promise((resolve, reject) => {
 			this.resolveExitPromise = resolve;
 			this.rejectExitPromise = reject;
