@@ -117,7 +117,7 @@ ${text}`;
 		if (this.isScreenReaderEnabled) {
 			return {
 				output: this.screenReaderOutput,
-				height: this.screenReaderOutput.split('\n').length,
+				height: this.height,
 			};
 		}
 
