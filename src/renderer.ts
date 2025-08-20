@@ -16,10 +16,19 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 			const output = renderNodeToScreenReaderOutput(node);
 			const outputHeight = output === '' ? 0 : output.split('\n').length;
 
+			let staticOutput = '';
+			if (node.staticNode) {
+				const staticContent = renderNodeToScreenReaderOutput(node.staticNode);
+
+				if (staticContent) {
+					staticOutput = `${staticContent}\n`;
+				}
+			}
+
 			return {
 				output,
 				outputHeight,
-				staticOutput: '',
+				staticOutput,
 			};
 		}
 

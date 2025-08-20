@@ -68,7 +68,7 @@ export default class Ink {
 			: throttle(this.onRender, 32, {
 					leading: true,
 					trailing: true,
-				});
+			  });
 
 		this.rootNode.onImmediateRender = this.onRender;
 		this.log = logUpdate.create(options.stdout);
@@ -77,7 +77,7 @@ export default class Ink {
 			: (throttle(this.log, undefined, {
 					leading: true,
 					trailing: true,
-				}) as unknown as LogUpdate);
+			  }) as unknown as LogUpdate);
 
 		// Ignore last render after unmounting a tree to prevent empty output before exit
 		this.isUnmounted = false;
@@ -169,11 +169,11 @@ export default class Ink {
 		// If <Static> output isn't empty, it means new children have been added to it
 		const hasStaticOutput = staticOutput && staticOutput !== '\n';
 
-		if (this.options.debug) {
-			if (hasStaticOutput) {
-				this.fullStaticOutput += staticOutput;
-			}
+		if (hasStaticOutput) {
+			this.fullStaticOutput += staticOutput;
+		}
 
+		if (this.options.debug) {
 			this.options.stdout.write(this.fullStaticOutput + output);
 			return;
 		}
@@ -189,13 +189,15 @@ export default class Ink {
 		}
 
 		if (this.isScreenReaderEnabled) {
-			if (output === this.lastOutput) {
+			const fullOutput = this.fullStaticOutput + output;
+
+			if (fullOutput === this.lastOutput) {
 				return;
 			}
 
 			const terminalWidth = this.options.stdout.columns || 80;
 
-			const wrappedOutput = wrapAnsi(output, terminalWidth, {
+			const wrappedOutput = wrapAnsi(fullOutput, terminalWidth, {
 				trim: false,
 				hard: true,
 			});
@@ -207,14 +209,10 @@ export default class Ink {
 
 			this.options.stdout.write(erase + wrappedOutput);
 
-			this.lastOutput = output;
+			this.lastOutput = fullOutput;
 			this.lastOutputHeight =
 				wrappedOutput === '' ? 0 : wrappedOutput.split('\n').length;
 			return;
-		}
-
-		if (hasStaticOutput) {
-			this.fullStaticOutput += staticOutput;
 		}
 
 		if (this.lastOutputHeight >= this.options.stdout.rows) {
