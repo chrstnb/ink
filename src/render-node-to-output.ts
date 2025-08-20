@@ -114,10 +114,6 @@ const getScreenReaderOutput = (
 		skipStaticElements: boolean;
 	},
 ): string => {
-	if (options.skipStaticElements && node.internal_static) {
-		return '';
-	}
-
 	const fragments: ScreenReaderTextFragment[] = [];
 	buildScreenReaderOutput(
 		node,
