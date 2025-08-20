@@ -60,14 +60,14 @@ export default class Ink {
 			options.isScreenReaderEnabled ??
 			process.env['INK_SCREEN_READER'] === 'true';
 
-		const unthrottled = options.debug;
+		const unthrottled = options.debug || this.isScreenReaderEnabled;
 
 		this.rootNode.onRender = unthrottled
 			? this.onRender
 			: throttle(this.onRender, 32, {
 					leading: true,
 					trailing: true,
-			  });
+				});
 
 		this.rootNode.onImmediateRender = this.onRender;
 		this.log = logUpdate.create(options.stdout);
@@ -76,7 +76,7 @@ export default class Ink {
 			: (throttle(this.log, undefined, {
 					leading: true,
 					trailing: true,
-			  }) as unknown as LogUpdate);
+				}) as unknown as LogUpdate);
 
 		// Ignore last render after unmounting a tree to prevent empty output before exit
 		this.isUnmounted = false;
@@ -168,10 +168,6 @@ export default class Ink {
 		// If <Static> output isn't empty, it means new children have been added to it
 		const hasStaticOutput = staticOutput && staticOutput !== '\n';
 
-		const isNewStaticOutput =
-			hasStaticOutput &&
-			(!this.isScreenReaderEnabled || staticOutput !== this.lastStaticOutput);
-
 		if (this.options.debug) {
 			if (hasStaticOutput) {
 				this.fullStaticOutput += staticOutput;
@@ -191,9 +187,8 @@ export default class Ink {
 			return;
 		}
 
-		if (isNewStaticOutput) {
+		if (hasStaticOutput) {
 			this.fullStaticOutput += staticOutput;
-			this.lastStaticOutput = staticOutput;
 		}
 
 		if (this.lastOutputHeight >= this.options.stdout.rows) {
@@ -207,13 +202,13 @@ export default class Ink {
 		}
 
 		// To ensure static output is cleanly rendered before main output, clear main output first
-		if (isNewStaticOutput) {
+		if (hasStaticOutput) {
 			this.log.clear();
 			this.options.stdout.write(staticOutput);
 			this.log(output);
 		}
 
-		if (!isNewStaticOutput && output !== this.lastOutput) {
+		if (!hasStaticOutput && output !== this.lastOutput) {
 			this.throttledLog(output);
 		}
 
@@ -232,11 +227,11 @@ export default class Ink {
 					stderr={this.options.stderr}
 					writeToStdout={this.writeToStdout}
 					writeToStderr={this.writeToStderr}
-				exitOnCtrlC={this.options.exitOnCtrlC}
-				onExit={this.unmount}
-			>
-				{node}
-			</App>
+					exitOnCtrlC={this.options.exitOnCtrlC}
+					onExit={this.unmount}
+				>
+					{node}
+				</App>
 			</AccessibilityContext.Provider>
 		);
 

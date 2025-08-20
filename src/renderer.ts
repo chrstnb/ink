@@ -1,4 +1,7 @@
-import renderNodeToOutput from './render-node-to-output.js';
+import renderNodeToOutput,
+{
+	renderNodeToScreenReaderOutput,
+} from './render-node-to-output.js';
 import Output from './output.js';
 import {type DOMElement} from './dom.js';
 
@@ -9,16 +12,26 @@ type Result = {
 };
 
 const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
+	if (isScreenReaderEnabled) {
+		const output = renderNodeToScreenReaderOutput(node, {
+			skipStaticElements: false,
+		});
+
+		return {
+			output,
+			outputHeight: 0,
+			staticOutput: '',
+		};
+	}
+
 	if (node.yogaNode) {
 		const output = new Output({
 			width: node.yogaNode.getComputedWidth(),
 			height: node.yogaNode.getComputedHeight(),
-			isScreenReaderEnabled,
 		});
 
 		renderNodeToOutput(node, output, {
 			skipStaticElements: true,
-			isScreenReaderEnabled,
 		});
 
 		let staticOutput;
@@ -27,12 +40,10 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 			staticOutput = new Output({
 				width: node.staticNode.yogaNode.getComputedWidth(),
 				height: node.staticNode.yogaNode.getComputedHeight(),
-				isScreenReaderEnabled,
 			});
 
 			renderNodeToOutput(node.staticNode, staticOutput, {
 				skipStaticElements: false,
-				isScreenReaderEnabled,
 			});
 		}
 
