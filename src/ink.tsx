@@ -39,7 +39,6 @@ export default class Ink {
 	// Ignore last render after unmounting a tree to prevent empty output before exit
 	private isUnmounted: boolean;
 	private lastOutput: string;
-	private lastStaticOutput: string;
 	private lastOutputHeight: number;
 	private readonly container: FiberRoot;
 	private readonly rootNode: dom.DOMElement;
@@ -84,7 +83,6 @@ export default class Ink {
 
 		// Store last output to only rerender when needed
 		this.lastOutput = '';
-		this.lastStaticOutput = '';
 		this.lastOutputHeight = 0;
 
 		// This variable is used only in debug mode to store full static output
