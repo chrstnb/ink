@@ -40,10 +40,14 @@ const buildScreenReaderOutput = (
 	options: {
 		offsetX?: number;
 		offsetY?: number;
+		skipStaticElements: boolean;
 	},
 	fragments: ScreenReaderTextFragment[],
 ) => {
-	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
+	if (
+		node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE ||
+		(options.skipStaticElements && node.internal_static)
+	) {
 		return;
 	}
 
@@ -96,6 +100,7 @@ const buildScreenReaderOutput = (
 				{
 					offsetX: x,
 					offsetY: y,
+					skipStaticElements: options.skipStaticElements,
 				},
 				fragments,
 			);
@@ -114,7 +119,13 @@ const getScreenReaderOutput = (
 	}
 
 	const fragments: ScreenReaderTextFragment[] = [];
-	buildScreenReaderOutput(node, {}, fragments);
+	buildScreenReaderOutput(
+		node,
+		{
+			skipStaticElements: options.skipStaticElements,
+		},
+		fragments,
+	);
 
 	fragments.sort((a, b) => {
 		if (a.y !== b.y) {
@@ -148,6 +159,7 @@ const getScreenReaderOutput = (
 
 	return output;
 };
+
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
 const renderNodeToOutput = (
