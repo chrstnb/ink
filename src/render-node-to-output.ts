@@ -29,8 +29,14 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 
 export type OutputTransformer = (s: string, index: number) => string;
 
-const renderNodeToScreenReaderOutput = (node: DOMElement): string => {
-	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
+const renderNodeToScreenReaderOutput = (
+	node: DOMElement,
+	options: {skipStaticElements: boolean},
+): string => {
+	if (
+		node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE ||
+		(options.skipStaticElements && node.internal_static)
+	) {
 		return '';
 	}
 
@@ -60,7 +66,7 @@ const renderNodeToScreenReaderOutput = (node: DOMElement): string => {
 	}
 
 	const children = node.childNodes.map(child =>
-		renderNodeToScreenReaderOutput(child as DOMElement),
+		renderNodeToScreenReaderOutput(child as DOMElement, options),
 	);
 
 	if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
@@ -101,10 +107,14 @@ const renderNodeToOutput = (
 	} = options;
 
 	if (isScreenReaderEnabled) {
-		const screenReaderOutput = renderNodeToScreenReaderOutput(node);
+		const screenReaderOutput = renderNodeToScreenReaderOutput(node, {
+			skipStaticElements,
+		});
+
 		output.write(0, 0, screenReaderOutput, {transformers: []});
 		return;
 	}
+
 
 	if (skipStaticElements && node.internal_static) {
 		return;
