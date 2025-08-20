@@ -171,7 +171,7 @@ export default class Ink {
 		// In screen reader mode, renderer returns the full static output, so we shouldn't append to it
 		if (hasStaticOutput) {
 			if (this.isScreenReaderEnabled) {
-				this.fullStaticOutput = staticOutput;
+				this.fullStaticOutput += staticOutput;
 			} else {
 				this.fullStaticOutput += staticOutput;
 			}
@@ -329,10 +329,11 @@ export default class Ink {
 	}
 
 	async waitUntilExit(): Promise<void> {
-		this.exitPromise ||= new Promise((resolve, reject) => {
-			this.resolveExitPromise = resolve;
-			this.rejectExitPromise = reject;
-		});
+		this.exitPromise ||=
+			new Promise((resolve, reject) => {
+				this.resolveExitPromise = resolve;
+				this.rejectExitPromise = reject;
+			});
 
 		return this.exitPromise;
 	}
