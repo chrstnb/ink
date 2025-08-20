@@ -30,8 +30,6 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 export type OutputTransformer = (s: string, index: number) => string;
 
 const getScreenReaderOutput = (() => {
-	let previousStaticChildCount = 0;
-
 	return (
 		node: DOMElement,
 			options: {
