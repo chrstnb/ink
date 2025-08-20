@@ -39,6 +39,7 @@ export default class Ink {
 	// Ignore last render after unmounting a tree to prevent empty output before exit
 	private isUnmounted: boolean;
 	private lastOutput: string;
+	private lastStaticOutput: string;
 	private lastOutputHeight: number;
 	private readonly container: FiberRoot;
 	private readonly rootNode: dom.DOMElement;
@@ -67,7 +68,7 @@ export default class Ink {
 			: throttle(this.onRender, 32, {
 					leading: true,
 					trailing: true,
-				});
+			  });
 
 		this.rootNode.onImmediateRender = this.onRender;
 		this.log = logUpdate.create(options.stdout);
@@ -76,13 +77,14 @@ export default class Ink {
 			: (throttle(this.log, undefined, {
 					leading: true,
 					trailing: true,
-				}) as unknown as LogUpdate);
+			  }) as unknown as LogUpdate);
 
 		// Ignore last render after unmounting a tree to prevent empty output before exit
 		this.isUnmounted = false;
 
 		// Store last output to only rerender when needed
 		this.lastOutput = '';
+		this.lastStaticOutput = '';
 		this.lastOutputHeight = 0;
 
 		// This variable is used only in debug mode to store full static output
