@@ -69,10 +69,6 @@ const renderNodeToScreenReaderOutput = (
 		renderNodeToScreenReaderOutput(child as DOMElement, options),
 	);
 
-	if (node.staticNode) {
-		children.push(renderNodeToScreenReaderOutput(node.staticNode, options));
-	}
-
 	if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
 		const separator =
 			node.style.flexDirection === 'column' ||
