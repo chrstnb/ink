@@ -9,6 +9,7 @@ import patchConsole from 'patch-console';
 import {LegacyRoot} from 'react-reconciler/constants.js';
 import {type FiberRoot} from 'react-reconciler';
 import Yoga from 'yoga-layout';
+import wrapAnsi from 'wrap-ansi';
 import reconciler from './reconciler.js';
 import render from './renderer.js';
 import * as dom from './dom.js';
@@ -189,11 +190,41 @@ export default class Ink {
 
 		if (this.isScreenReaderEnabled) {
 			if (hasStaticOutput) {
-				this.options.stdout.write(staticOutput);
+				// We need to erase the main output before writing new static output
+				const erase = 
+					this.lastOutputHeight > 0
+						? ansiEscapes.eraseLines(this.lastOutputHeight)
+						: '';
+				this.options.stdout.write(erase + staticOutput);
+				// After erasing, the last output is gone, so we should reset its height
+				this.lastOutputHeight = 0;
+			}
+
+			if (output === this.lastOutput && !hasStaticOutput) {
+				return;
+			}
+
+			const terminalWidth = this.options.stdout.columns || 80;
+
+			const wrappedOutput = wrapAnsi(output, terminalWidth, {
+				trim: false,
+				hard: true,
+			});
+
+			// If we haven't erased yet, do it now.
+			if (!hasStaticOutput) {
+				const erase = 
+					this.lastOutputHeight > 0
+						? ansiEscapes.eraseLines(this.lastOutputHeight)
+						: '';
+				this.options.stdout.write(erase + wrappedOutput);
+			} else {
+				this.options.stdout.write(wrappedOutput);
 			}
 
 			this.lastOutput = output;
-			this.lastOutputHeight = outputHeight;
+			this.lastOutputHeight =
+				wrappedOutput === '' ? 0 : wrappedOutput.split('\n').length;
 			return;
 		}
 
@@ -338,10 +369,11 @@ export default class Ink {
 	}
 
 	async waitUntilExit(): Promise<void> {
-		this.exitPromise ||= new Promise((resolve, reject) => {
-			this.resolveExitPromise = resolve;
-			this.rejectExitPromise = reject;
-		});
+		this.exitPromise ||=
+			new Promise((resolve, reject) => {
+				this.resolveExitPromise = resolve;
+				this.rejectExitPromise = reject;
+			});
 
 		return this.exitPromise;
 	}
