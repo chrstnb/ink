@@ -38,6 +38,7 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 
 		renderNodeToOutput(node, output, {
 			skipStaticElements: true,
+			isScreenReaderEnabled,
 		});
 
 		let staticOutput;
