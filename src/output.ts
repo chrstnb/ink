@@ -76,7 +76,7 @@ export default class Output {
 
 		if (this.isScreenReaderEnabled) {
 			if (text) {
-				this.screenReaderOutput = text;
+				this.screenReaderOutput += text;
 			}
 
 			return;
