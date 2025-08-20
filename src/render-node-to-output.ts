@@ -67,6 +67,7 @@ export const renderNodeToScreenReaderOutput = (
 					childNode as DOMElement,
 					{
 						parentRole: node.internal_accessibility?.role,
+						skipStaticElements: options.skipStaticElements,
 					},
 				);
 
