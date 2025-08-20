@@ -171,7 +171,7 @@ export default class Ink {
 
 		if (this.isScreenReaderEnabled) {
 			if (hasStaticOutput) {
-				this.fullStaticOutput = staticOutput;
+				this.fullStaticOutput += staticOutput;
 			}
 
 			const fullOutput = this.fullStaticOutput + output;
