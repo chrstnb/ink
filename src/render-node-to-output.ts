@@ -6,7 +6,7 @@ import getMaxWidth from './get-max-width.js';
 import squashTextNodes from './squash-text-nodes.js';
 import renderBorder from './render-border.js';
 import renderBackground from './render-background.js';
-import {type DOMElement} from './dom.js';
+import {type DOMElement, type TextNode} from './dom.js';
 import type Output from './output.js';
 
 // If parent container is `<Box>`, text nodes will be treated as separate nodes in
@@ -29,70 +29,6 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 
 export type OutputTransformer = (s: string, index: number) => string;
 
-export const renderNodeToScreenReaderOutput = (
-	node: DOMElement,
-	options: {
-		parentRole?: string;
-	} = {},
-): string => {
-	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
-		return '';
-	}
-
-	let output = '';
-
-	if (node.nodeName === 'ink-text') {
-		output = squashTextNodes(node);
-	} else if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
-		const separator = 
-			node.style.flexDirection === 'row' ||
-			node.style.flexDirection === 'row-reverse'
-				? ' '
-				: '\n';
-
-		const childNodes =
-			node.style.flexDirection === 'row-reverse' ||
-			node.style.flexDirection === 'column-reverse'
-				? [...node.childNodes].reverse()
-				: [...node.childNodes];
-
-		output = childNodes
-			.map(childNode => {
-				const screenReaderOutput = renderNodeToScreenReaderOutput(
-					childNode as DOMElement,
-					{
-						parentRole: node.internal_accessibility?.role,
-					},
-				);
-
-				// When a text node contains multiple lines, it's still a single text node.
-				// We need to split it into lines and then join them with the separator.
-				return screenReaderOutput.split('\n').join(separator);
-			})
-			.filter(Boolean)
-			.join(separator);
-	}
-
-
-	if (node.internal_accessibility) {
-		const {role, state} = node.internal_accessibility;
-
-		if (state) {
-			const stateKeys = Object.keys(state) as Array<keyof typeof state>;
-			const stateDescription = stateKeys.filter(key => state[key]).join(', ');
-
-			if (stateDescription) {
-				output = `(${stateDescription}) ${output}`;
-			}
-		}
-
-		if (role && role !== options.parentRole) {
-			output = `${role}: ${output}`;
-		}
-	}
-
-	return output;
-};
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
 const renderNodeToOutput = (
@@ -103,6 +39,7 @@ const renderNodeToOutput = (
 		offsetY?: number;
 		transformers?: OutputTransformer[];
 		skipStaticElements: boolean;
+		isScreenReaderEnabled: boolean;
 	},
 ) => {
 	const {
@@ -110,6 +47,7 @@ const renderNodeToOutput = (
 		offsetY = 0,
 		transformers = [],
 		skipStaticElements,
+		isScreenReaderEnabled,
 	} = options;
 
 	if (skipStaticElements && node.internal_static) {
@@ -156,8 +94,7 @@ const renderNodeToOutput = (
 		}
 
 		let clipped = false;
-
-		if (node.nodeName === 'ink-box') {
+		if (node.nodeName === 'ink-box' && !isScreenReaderEnabled) {
 			renderBackground(x, y, node, output);
 			renderBorder(x, y, node, output);
 
@@ -193,12 +130,17 @@ const renderNodeToOutput = (
 		}
 
 		if (node.nodeName === 'ink-root' || node.nodeName === 'ink-box') {
-			for (const childNode of node.childNodes) {
+			const childNodes = isScreenReaderEnabled
+				? getScreenReaderChildNodes(node)
+				: [...node.childNodes];
+
+			for (const childNode of childNodes) {
 				renderNodeToOutput(childNode as DOMElement, output, {
 					offsetX: x,
 					offsetY: y,
 					transformers: newTransformers,
 					skipStaticElements,
+					isScreenReaderEnabled,
 				});
 			}
 
@@ -208,5 +150,15 @@ const renderNodeToOutput = (
 		}
 	}
 };
+
+const getScreenReaderChildNodes = (node: DOMElement): (DOMElement | TextNode)[] => {
+		const childNodes =
+			node.style.flexDirection === 'row-reverse' ||
+			node.style.flexDirection === 'column-reverse'
+				? [...node.childNodes].reverse()
+				: [...node.childNodes];
+
+		return childNodes;
+		}
 
 export default renderNodeToOutput;
