@@ -80,8 +80,7 @@ export default class Output {
 
 		if (this.isScreenReaderEnabled) {
 			if (text) {
-				this.screenReaderOutput += `
-${text}`;
+				this.screenReaderOutput += text;
 			}
 
 			return;
@@ -117,7 +116,7 @@ ${text}`;
 		if (this.isScreenReaderEnabled) {
 			return {
 				output: this.screenReaderOutput,
-				height: this.height,
+				height: this.screenReaderOutput.split('\n').length,
 			};
 		}
 
