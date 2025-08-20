@@ -29,74 +29,92 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 
 export type OutputTransformer = (s: string, index: number) => string;
 
-const renderNodeToScreenReaderOutput = (
-	node: DOMElement,
-	options: {skipStaticElements: boolean},
-): string => {
-	if (
-		node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE ||
-		(options.skipStaticElements && node.internal_static)
-	) {
-		return '';
-	}
+const getScreenReaderOutput = (() => {
+	let previousStaticChildCount = 0;
 
-	let output = '';
-
-	if (node.internal_accessibility) {
-		const {role, state} = node.internal_accessibility;
-
-		if (role) {
-			output += `${role}: `; 
+	return (
+		node: DOMElement,
+			options: {
+				skipStaticElements: boolean;
+			},
+	): string => {
+		if (
+			node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE ||
+				(options.skipStaticElements && node.internal_static)
+		) {
+			return '';
 		}
 
-		if (state) {
-			const states = Object.entries(state)
-				.filter(([, value]) => value)
-				.map(([key]) => `(${key})`);
+		let output = '';
 
-			if (states.length > 0) {
-				output += `${states.join(' ')} `; 
+		if (node.internal_accessibility) {
+			const {role, state} = node.internal_accessibility;
+
+			if (role) {
+				output += `${role}: `; 
+			}
+
+			if (state) {
+				const states = Object.entries(state)
+					.filter(([, value]) => value)
+					.map(([key]) => `(${key})`);
+
+				if (states.length > 0) {
+					output += `${states.join(' ')} `; 
+				}
 			}
 		}
-	}
 
-	if (node.nodeName === 'ink-text') {
-		const text = squashTextNodes(node);
-		return output + text;
-	}
+		if (node.nodeName === 'ink-text') {
+			const text = squashTextNodes(node);
+			return output + text;
+		}
 
-	const children = node.childNodes.map(child =>
-		renderNodeToScreenReaderOutput(child as DOMElement, options),
-	);
+		// In screen reader mode, the reconciler just appends all children to the static node
+		// on each render. This is a workaround to only render new static children
+		// since the last render.
+		const childNodes = 
+			node.internal_static && !options.skipStaticElements
+				? node.childNodes.slice(previousStaticChildCount)
+				: node.childNodes;
 
-	if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
-		const separator =
-			node.style.flexDirection === 'column' ||
-			node.style.flexDirection === 'column-reverse'
-				? '\n'
-				: ' ';
+		if (node.internal_static && !options.skipStaticElements) {
+			previousStaticChildCount = node.childNodes.length;
+		}
 
-		// Filter out empty children to avoid leading/trailing separators
-		const nonEmptyChildren = children.filter(child => child.trim().length > 0);
-		output += nonEmptyChildren.join(separator);
-	} else {
-		output += children.join('');
-	}
+		const children = childNodes.map(child =>
+			getScreenReaderOutput(child as DOMElement, options),
+		);
 
-	return output;
-};
+		if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
+			const separator =
+				node.style.flexDirection === 'column' ||
+				node.style.flexDirection === 'column-reverse'
+					? '\n'
+					: ' ';
+
+			// Filter out empty children to avoid leading/trailing separators
+			const nonEmptyChildren = children.filter(child => child.trim().length > 0);
+			output += nonEmptyChildren.join(separator);
+		} else {
+			output += children.join('');
+		}
+
+		return output;
+	};
+})();
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
 const renderNodeToOutput = (
 	node: DOMElement,
-	output: Output,
-	options: {
-		override?: number;
-		overrideY?: number;
-		transformers?: OutputTransformer[];
-		skipStaticElements: boolean;
-		isScreenReaderEnabled: boolean;
-	},
+		output: Output,
+		options: {
+			override?: number;
+			overrideY?: number;
+			transformers?: OutputTransformer[];
+			skipStaticElements: boolean;
+			isScreenReaderEnabled: boolean;
+		},
 ) => {
 	const {
 		override = 0,
@@ -107,13 +125,14 @@ const renderNodeToOutput = (
 	} = options;
 
 	if (isScreenReaderEnabled) {
-		const screenReaderOutput = renderNodeToScreenReaderOutput(node, {
+		const screenReaderOutput = getScreenReaderOutput(node, {
 			skipStaticElements,
 		});
 
 		output.write(0, 0, screenReaderOutput, {transformers: []});
 		return;
 	}
+
 
 
 	if (skipStaticElements && node.internal_static) {
