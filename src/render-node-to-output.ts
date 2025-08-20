@@ -40,7 +40,7 @@ const getScreenReaderOutput = (() => {
 	): string => {
 		if (
 			node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE ||
-				(options.skipStaticElements && node.internal_static)
+					(options.skipStaticElements && node.internal_static)
 		) {
 			return '';
 		}
@@ -68,6 +68,15 @@ const getScreenReaderOutput = (() => {
 		if (node.nodeName === 'ink-text') {
 			const text = squashTextNodes(node);
 			return output + text;
+		}
+
+		
+		if (
+			node.internal_static &&
+			!options.skipStaticElements &&
+			node.childNodes.length < previousStaticChildCount
+		) {
+			previousStaticChildCount = 0;
 		}
 
 		// In screen reader mode, the reconciler just appends all children to the static node
