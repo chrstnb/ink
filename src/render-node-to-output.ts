@@ -41,12 +41,15 @@ const buildScreenReaderOutput = (
 		offsetX?: number;
 		offsetY?: number;
 		skipStaticElements: boolean;
+		isInsideStaticElement?: boolean;
 	},
 	fragments: ScreenReaderTextFragment[],
 ) => {
+	const isStatic = options.isInsideStaticElement || node.internal_static;
+
 	if (
 		node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE ||
-		(options.skipStaticElements && node.internal_static)
+		(options.skipStaticElements && isStatic)
 	) {
 		return;
 	}
@@ -101,6 +104,7 @@ const buildScreenReaderOutput = (
 					offsetX: x,
 					offsetY: y,
 					skipStaticElements: options.skipStaticElements,
+					isInsideStaticElement: isStatic,
 				},
 				fragments,
 			);
@@ -114,6 +118,10 @@ const getScreenReaderOutput = (
 		skipStaticElements: boolean;
 	},
 ): string => {
+	if (options.skipStaticElements && node.internal_static) {
+		return '';
+	}
+
 	const fragments: ScreenReaderTextFragment[] = [];
 	buildScreenReaderOutput(
 		node,
