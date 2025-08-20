@@ -12,29 +12,30 @@ type Result = {
 
 const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 	if (node.yogaNode) {
-		if (isScreenReaderEnabled) {
-			const output = renderNodeToScreenReaderOutput(node);
-			const outputHeight = output === '' ? 0 : output.split('\n').length;
+		// if (isScreenReaderEnabled) {
+		// 	const output = renderNodeToScreenReaderOutput(node);
+		// 	const outputHeight = output === '' ? 0 : output.split('\n').length;
 
-			let staticOutput = '';
-			if (node.staticNode) {
-				const staticContent = renderNodeToScreenReaderOutput(node.staticNode);
+		// 	let staticOutput = '';
+		// 	if (node.staticNode) {
+		// 		const staticContent = renderNodeToScreenReaderOutput(node.staticNode);
 
-				if (staticContent) {
-					staticOutput = `${staticContent}\n`;
-				}
-			}
+		// 		if (staticContent) {
+		// 			staticOutput = `${staticContent}\n`;
+		// 		}
+		// 	}
 
-			return {
-				output,
-				outputHeight,
-				staticOutput,
-			};
-		}
+		// 	return {
+		// 		output,
+		// 		outputHeight,
+		// 		staticOutput,
+		// 	};
+		// }
 
 		const output = new Output({
 			width: node.yogaNode.getComputedWidth(),
 			height: node.yogaNode.getComputedHeight(),
+			isScreenReaderEnabled,
 		});
 
 		renderNodeToOutput(node, output, {
@@ -47,6 +48,7 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 			staticOutput = new Output({
 				width: node.staticNode.yogaNode.getComputedWidth(),
 				height: node.staticNode.yogaNode.getComputedHeight(),
+				isScreenReaderEnabled,
 			});
 
 			renderNodeToOutput(node.staticNode, staticOutput, {

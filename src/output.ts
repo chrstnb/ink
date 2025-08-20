@@ -21,6 +21,7 @@ import {type OutputTransformer} from './render-node-to-output.js';
 type Options = {
 	width: number;
 	height: number;
+	isScreenReaderEnabled: boolean;
 };
 
 type Operation = WriteOperation | ClipOperation | UnclipOperation;
@@ -52,14 +53,16 @@ type UnclipOperation = {
 export default class Output {
 	width: number;
 	height: number;
+	isScreenReaderEnabled: boolean;
 
 	private readonly operations: Operation[] = [];
 
 	constructor(options: Options) {
-		const {width, height} = options;
+		const {width, height, isScreenReaderEnabled} = options;
 
 		this.width = width;
 		this.height = height;
+		this.isScreenReaderEnabled = isScreenReaderEnabled;
 	}
 
 	write(
