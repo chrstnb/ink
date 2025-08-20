@@ -188,7 +188,11 @@ export default class Ink {
 		}
 
 		if (hasStaticOutput) {
-			this.fullStaticOutput += staticOutput;
+			if (this.isScreenReaderEnabled) {
+				this.fullStaticOutput = staticOutput;
+			} else {
+				this.fullStaticOutput += staticOutput;
+			}
 		}
 
 		if (this.lastOutputHeight >= this.options.stdout.rows) {
@@ -227,11 +231,11 @@ export default class Ink {
 					stderr={this.options.stderr}
 					writeToStdout={this.writeToStdout}
 					writeToStderr={this.writeToStderr}
-					exitOnCtrlC={this.options.exitOnCtrlC}
-					onExit={this.unmount}
-				>
-					{node}
-				</App>
+				exitOnCtrlC={this.options.exitOnCtrlC}
+				onExit={this.unmount}
+			>
+				{node}
+			</App>
 			</AccessibilityContext.Provider>
 		);
 
@@ -327,7 +331,7 @@ export default class Ink {
 		}
 	}
 
-	async waitUntilExit(): Promise<void> {
+	await waitUntilExit(): Promise<void> {
 		this.exitPromise ||= new Promise((resolve, reject) => {
 			this.resolveExitPromise = resolve;
 			this.rejectExitPromise = reject;
