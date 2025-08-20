@@ -9,29 +9,30 @@ type Result = {
 };
 
 const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
-	if (!node.yogaNode) {
-		return {
-			output: '',
-			outputHeight: 0,
-			staticOutput: '',
-		};
-	}
-
-	if (isScreenReaderEnabled) {
+	if (node.yogaNode) {
 		const output = new Output({
 			width: node.yogaNode.getComputedWidth(),
-			height: node.yogaNode.getComputedHeight()
+			height: node.yogaNode.getComputedHeight(),
+			isScreenReaderEnabled,
 		});
 
 		renderNodeToOutput(node, output, {
-			skipStaticElements: false,
-			isScreenReaderEnabled
+			skipStaticElements: true,
+			isScreenReaderEnabled,
 		});
 
+		let staticOutput;
+
 		if (node.staticNode?.yogaNode) {
-			renderNodeToOutput(node.staticNode, output, {
+			staticOutput = new Output({
+				width: node.staticNode.yogaNode.getComputedWidth(),
+				height: node.staticNode.yogaNode.getComputedHeight(),
+				isScreenReaderEnabled,
+			});
+
+			renderNodeToOutput(node.staticNode, staticOutput, {
 				skipStaticElements: false,
-				isScreenReaderEnabled
+				isScreenReaderEnabled,
 			});
 		}
 
@@ -40,42 +41,17 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 		return {
 			output: generatedOutput,
 			outputHeight,
-			staticOutput: ''
+			// Newline at the end is needed, because static output doesn't have one,
+			// so
+			// interactive output will override last line of static output
+			staticOutput: staticOutput ? `${staticOutput.get().output}\n` : '',
 		};
 	}
 
-	const output = new Output({
-		width: node.yogaNode.getComputedWidth(),
-		height: node.yogaNode.getComputedHeight()
-	});
-
-	renderNodeToOutput(node, output, {
-		skipStaticElements: true,
-		isScreenReaderEnabled
-	});
-
-	let staticOutput;
-
-	if (node.staticNode?.yogaNode) {
-		staticOutput = new Output({
-			width: node.staticNode.yogaNode.getComputedWidth(),
-			height: node.staticNode.yogaNode.getComputedHeight()
-		});
-
-		renderNodeToOutput(node.staticNode, staticOutput, {
-			skipStaticElements: false,
-			isScreenReaderEnabled
-		});
-	}
-
-	const {output: generatedOutput, height: outputHeight} = output.get();
-
 	return {
-		output: generatedOutput,
-		outputHeight,
-		// Newline at the end is needed, because static output doesn't have one, so
-		// interactive output will override last line of static output
-		staticOutput: staticOutput ? `${staticOutput.get().output}\n` : ''
+		output: '',
+		outputHeight: 0,
+		staticOutput: '',
 	};
 };
 
