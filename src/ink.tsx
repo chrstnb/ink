@@ -1,6 +1,6 @@
 import process from 'node:process';
 import React, {type ReactNode} from 'react';
-import {throttle, debounce} from 'es-toolkit/compat';
+import {throttle} from 'es-toolkit/compat';
 import ansiEscapes from 'ansi-escapes';
 import isInCi from 'is-in-ci';
 import autoBind from 'auto-bind';
