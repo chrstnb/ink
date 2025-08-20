@@ -170,7 +170,11 @@ export default class Ink {
 		const hasStaticOutput = staticOutput && staticOutput !== '\n';
 
 		if (this.isScreenReaderEnabled) {
-			const fullOutput = staticOutput + output;
+			if (hasStaticOutput) {
+				this.fullStaticOutput = staticOutput;
+			}
+
+			const fullOutput = this.fullStaticOutput + output;
 
 			if (fullOutput === this.lastOutput) {
 				return;
