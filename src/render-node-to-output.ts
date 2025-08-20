@@ -65,7 +65,7 @@ const getScreenReaderOutput = (() => {
 
 		if (node.nodeName === 'ink-text') {
 			const text = squashTextNodes(node);
-			return output + text;
+			return text;
 		}
 
 		const children = node.childNodes.map(child =>
