@@ -9,28 +9,29 @@ type Result = {
 };
 
 const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
-	if (node.yogaNode) {
+	if (!node.yogaNode) {
+		return {
+			output: '',
+			outputHeight: 0,
+			staticOutput: '',
+		};
+	}
+
+	if (isScreenReaderEnabled) {
 		const output = new Output({
 			width: node.yogaNode.getComputedWidth(),
-			height: node.yogaNode.getComputedHeight(),
+			height: node.yogaNode.getComputedHeight()
 		});
 
 		renderNodeToOutput(node, output, {
-			skipStaticElements: true,
-			isScreenReaderEnabled,
+			skipStaticElements: false,
+			isScreenReaderEnabled
 		});
 
-		let staticOutput;
-
 		if (node.staticNode?.yogaNode) {
-			staticOutput = new Output({
-				width: node.staticNode.yogaNode.getComputedWidth(),
-				height: node.staticNode.yogaNode.getComputedHeight(),
-			});
-
-			renderNodeToOutput(node.staticNode, staticOutput, {
+			renderNodeToOutput(node.staticNode, output, {
 				skipStaticElements: false,
-				isScreenReaderEnabled,
+				isScreenReaderEnabled
 			});
 		}
 
@@ -39,16 +40,42 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 		return {
 			output: generatedOutput,
 			outputHeight,
-			// Newline at the end is needed, because static output doesn't have one, so
-			// interactive output will override last line of static output
-			staticOutput: staticOutput ? `${staticOutput.get().output}\n` : '',
+			staticOutput: ''
 		};
 	}
 
+	const output = new Output({
+		width: node.yogaNode.getComputedWidth(),
+		height: node.yogaNode.getComputedHeight()
+	});
+
+	renderNodeToOutput(node, output, {
+		skipStaticElements: true,
+		isScreenReaderEnabled
+	});
+
+	let staticOutput;
+
+	if (node.staticNode?.yogaNode) {
+		staticOutput = new Output({
+			width: node.staticNode.yogaNode.getComputedWidth(),
+			height: node.staticNode.yogaNode.getComputedHeight()
+		});
+
+		renderNodeToOutput(node.staticNode, staticOutput, {
+			skipStaticElements: false,
+			isScreenReaderEnabled
+		});
+	}
+
+	const {output: generatedOutput, height: outputHeight} = output.get();
+
 	return {
-		output: '',
-		outputHeight: 0,
-		staticOutput: '',
+		output: generatedOutput,
+		outputHeight,
+		// Newline at the end is needed, because static output doesn't have one, so
+		// interactive output will override last line of static output
+		staticOutput: staticOutput ? `${staticOutput.get().output}\n` : ''
 	};
 };
 
