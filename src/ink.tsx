@@ -60,7 +60,7 @@ export default class Ink {
 			options.isScreenReaderEnabled ??
 			process.env['INK_SCREEN_READER'] === 'true';
 
-		const unthrottled = options.debug || this.isScreenReaderEnabled;
+		const unthrottled = options.debug;
 
 		this.rootNode.onRender = unthrottled
 			? this.onRender
