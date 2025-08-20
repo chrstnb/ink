@@ -165,23 +165,6 @@ export default class Ink {
 			this.isScreenReaderEnabled,
 		);
 
-		if (this.isScreenReaderEnabled) {
-			const hasStaticOutput = staticOutput && staticOutput !== '\n';
-
-			if (hasStaticOutput) {
-				this.fullStaticOutput += staticOutput;
-			}
-
-			const fullOutput = this.fullStaticOutput + output;
-
-			if (fullOutput !== this.lastOutput) {
-				this.options.stdout.write(ansiEscapes.clearTerminal + fullOutput);
-				this.lastOutput = fullOutput;
-			}
-
-			return;
-		}
-
 		// If <Static> output isn't empty, it means new children have been added to it
 		const hasStaticOutput = staticOutput && staticOutput !== '\n';
 
