@@ -69,8 +69,12 @@ const renderNodeToScreenReaderOutput = (
 		renderNodeToScreenReaderOutput(child as DOMElement, options),
 	);
 
+	if (node.staticNode) {
+		children.push(renderNodeToScreenReaderOutput(node.staticNode, options));
+	}
+
 	if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
-		const separator = 
+		const separator =
 			node.style.flexDirection === 'column' ||
 			node.style.flexDirection === 'column-reverse'
 				? '\n'
@@ -165,9 +169,9 @@ const renderNodeToOutput = (
 			renderBackground(x, y, node, output);
 			renderBorder(x, y, node, output);
 
-			const clipHorizontally = 
+			const clipHorizontally =
 				node.style.overflowX === 'hidden' || node.style.overflow === 'hidden';
-			const clipVertically = 
+			const clipVertically =
 				node.style.overflowY === 'hidden' || node.style.overflow === 'hidden';
 
 			if (clipHorizontally || clipVertically) {
