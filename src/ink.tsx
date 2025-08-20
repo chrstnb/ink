@@ -1,6 +1,6 @@
 import process from 'node:process';
 import React, {type ReactNode} from 'react';
-import {throttle} from 'es-toolkit/compat';
+import {throttle, debounce} from 'es-toolkit/compat';
 import ansiEscapes from 'ansi-escapes';
 import isInCi from 'is-in-ci';
 import autoBind from 'auto-bind';
@@ -60,7 +60,7 @@ export default class Ink {
 			options.isScreenReaderEnabled ??
 			process.env['INK_SCREEN_READER'] === 'true';
 
-		const unthrottled = options.debug || this.isScreenReaderEnabled;
+		const unthrottled = options.debug;
 
 		this.rootNode.onRender = unthrottled
 			? this.onRender
@@ -227,11 +227,11 @@ export default class Ink {
 					stderr={this.options.stderr}
 					writeToStdout={this.writeToStdout}
 					writeToStderr={this.writeToStderr}
-					exitOnCtrlC={this.options.exitOnCtrlC}
-					onExit={this.unmount}
-				>
-					{node}
-				</App>
+				exitOnCtrlC={this.options.exitOnCtrlC}
+				onExit={this.unmount}
+			>
+				{node}
+			</App>
 			</AccessibilityContext.Provider>
 		);
 
