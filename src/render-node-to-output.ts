@@ -29,46 +29,6 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 
 export type OutputTransformer = (s: string, index: number) => string;
 
-interface ScreenReaderTextFragment {
-	x: number;
-	y: number;
-	value: string;
-}
-
-const linearizeFragments = (fragments: ScreenReaderTextFragment[]): string => {
-	fragments.sort((a, b) => {
-		if (a.y !== b.y) {
-			return a.y - b.y;
-		}
-
-		return a.x - b.x;
-	});
-
-	let output = '';
-	let lastY = -1;
-
-	for (const fragment of fragments) {
-		if (lastY !== -1) {
-			if (fragment.y > lastY) {
-				output += '\n'.repeat(fragment.y - lastY);
-			} else if (fragment.y === lastY) {
-				if (
-					output.length > 0 &&
-					!output.endsWith(' ')
-					&& !output.endsWith('\n')
-				) {
-					output += ' ';
-				}
-			}
-		}
-
-		output += fragment.value;
-		lastY = fragment.y;
-	}
-
-	return output;
-};
-
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
 const renderNodeToOutput = (
 	node: DOMElement,
@@ -82,26 +42,8 @@ const renderNodeToOutput = (
 	},
 	internalState: {
 		isInsideStaticElement?: boolean;
-		screenReaderFragments?: ScreenReaderTextFragment[];
 	} = {},
 ) => {
-	if (options.isScreenReaderEnabled && !internalState.screenReaderFragments) {
-		const screenReaderFragments: ScreenReaderTextFragment[] = [];
-		renderNodeToOutput(
-			node,
-			output,
-			options,
-			{
-				...internalState,
-				screenReaderFragments,
-			},
-		);
-
-		const screenReaderOutput = linearizeFragments(screenReaderFragments);
-		output.write(0, 0, screenReaderOutput, {transformers: []});
-		return;
-	}
-
 	const isStatic = internalState.isInsideStaticElement || node.internal_static;
 
 	if (
@@ -123,13 +65,33 @@ const renderNodeToOutput = (
 		const x = override + yogaNode.getComputedLeft();
 		const y = overrideY + yogaNode.getComputedTop();
 
-			if (isScreenReaderEnabled) {
-				let text = '';
-				if (node.internal_accessibility) {
+		// Transformers are functions that transform final text output of each component
+		// See Output class for logic that applies transformers
+		let newTransformers = transformers;
+
+		if (typeof node.internal_transform === 'function') {
+			newTransformers = [node.internal_transform, ...transformers];
+		}
+
+		if (node.nodeName === 'ink-text') {
+			let text = squashTextNodes(node);
+
+			if (text.length > 0) {
+				const currentWidth = widestLine(text);
+				const maxWidth = getMaxWidth(yogaNode);
+
+				if (currentWidth > maxWidth) {
+					const textWrap = node.style.textWrap ?? 'wrap';
+					text = wrapText(text, maxWidth, textWrap);
+				}
+
+				// Prepend accessibility info in screen reader mode
+				if (isScreenReaderEnabled && node.internal_accessibility) {
+					let accessibilityText = '';
 					const {role, state} = node.internal_accessibility;
 
 					if (role) {
-						text += `${role}: `; 
+						accessibilityText += `${role}: `;
 					}
 
 					if (state) {
@@ -138,86 +100,62 @@ const renderNodeToOutput = (
 							.map(([key]) => `(${key})`);
 
 						if (states.length > 0) {
-							text += `${states.join(' ')} `; 
+							accessibilityText += `${states.join(' ')} `;
 						}
 					}
+
+					text = accessibilityText + text;
 				}
 
-				if (node.nodeName === 'ink-text') {
-					text += squashTextNodes(node);
-				}
+				text = applyPaddingToText(node, text);
 
-				if (text.length > 0) {
-					internalState.screenReaderFragments?.push({x, y, value: text});
-				}
+				output.write(x, y, text, {transformers: newTransformers});
 			}
-
-		// Transformers are functions that transform final text output of each component
-		// See Output class for logic that applies transformers
-		let newTransformers = transformers;
-
-			if (typeof node.internal_transform === 'function') {
-				newTransformers = [node.internal_transform, ...transformers];
-			}
-
-			if (node.nodeName === 'ink-text' && !isScreenReaderEnabled) {
-				let text = squashTextNodes(node);
-
-				if (text.length > 0) {
-					const currentWidth = widestLine(text);
-					const maxWidth = getMaxWidth(yogaNode);
-
-					if (currentWidth > maxWidth) {
-						const textWrap = node.style.textWrap ?? 'wrap';
-						text = wrapText(text, maxWidth, textWrap);
-					}
-
-					text = applyPaddingToText(node, text);
-
-					output.write(x, y, text, {transformers: newTransformers});
-				}
-			}
+		}
 
 		let clipped = false;
 
-			if (node.nodeName === 'ink-box' && !isScreenReaderEnabled) {
-				renderBackground(x, y, node, output);
-				renderBorder(x, y, node, output);
+		if (node.nodeName === 'ink-box' && !isScreenReaderEnabled) {
+			renderBackground(x, y, node, output);
+			renderBorder(x, y, node, output);
 
-				const clipHorizontally =
-					node.style.overflowX === 'hidden' || node.style.overflow === 'hidden';
+			const clipHorizontally =
+				node.style.overflowX === 'hidden' || node.style.overflow === 'hidden';
 			const clipVertically =
-					node.style.overflowY === 'hidden' || node.style.overflow === 'hidden';
+				node.style.overflowY === 'hidden' || node.style.overflow === 'hidden';
 
-				if (clipHorizontally || clipVertically) {
-					const x1 = clipHorizontally
-						? x + yogaNode.getComputedBorder(Yoga.EDGE_LEFT)
-						: undefined;
+			if (clipHorizontally || clipVertically) {
+				const x1 = clipHorizontally
+					? x + yogaNode.getComputedBorder(Yoga.EDGE_LEFT)
+					: undefined;
 
-					const x2 = clipHorizontally
-						? x +
-						  yogaNode.getComputedWidth() -
-						  yogaNode.getComputedBorder(Yoga.EDGE_RIGHT)
-						: undefined;
+				const x2 = clipHorizontally
+					? x +
+					  yogaNode.getComputedWidth() -
+					  yogaNode.getComputedBorder(Yoga.EDGE_RIGHT)
+					: undefined;
 
-					const y1 = clipVertically
-						? y + yogaNode.getComputedBorder(Yoga.EDGE_TOP)
-						: undefined;
+				const y1 = clipVertically
+					? y + yogaNode.getComputedBorder(Yoga.EDGE_TOP)
+					: undefined;
 
-					const y2 = clipVertically
-						? y +
-						  yogaNode.getComputedHeight() -
-						  yogaNode.getComputedBorder(Yoga.EDGE_BOTTOM)
-						: undefined;
+				const y2 = clipVertically
+					? y +
+					  yogaNode.getComputedHeight() -
+					  yogaNode.getComputedBorder(Yoga.EDGE_BOTTOM)
+					: undefined;
 
-					output.clip({x1, x2, y1, y2});
-					clipped = true;
-				}
+				output.clip({x1, x2, y1, y2});
+				clipped = true;
 			}
+		}
 
-			if (node.nodeName === 'ink-root' || node.nodeName === 'ink-box') {
-				for (const childNode of node.childNodes) {
-					renderNodeToOutput(childNode as DOMElement, output, {
+		if (node.nodeName === 'ink-root' || node.nodeName === 'ink-box') {
+			for (const childNode of node.childNodes) {
+				renderNodeToOutput(
+					childNode as DOMElement,
+					output,
+					{
 						override: x,
 						overrideY: y,
 						transformers: newTransformers,
@@ -227,14 +165,15 @@ const renderNodeToOutput = (
 					{
 						...internalState,
 						isInsideStaticElement: isStatic,
-					});
-				}
+					},
+				);
+			}
 
-				if (clipped) {
-					output.unclip();
-				}
+			if (clipped) {
+				output.unclip();
 			}
 		}
+	}
 };
 
 export default renderNodeToOutput;

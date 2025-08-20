@@ -54,7 +54,6 @@ export default class Output {
 	width: number;
 	height: number;
 	isScreenReaderEnabled: boolean;
-	screenReaderOutput = '';
 
 	private readonly operations: Operation[] = [];
 
@@ -64,10 +63,6 @@ export default class Output {
 		this.width = width;
 		this.height = height;
 		this.isScreenReaderEnabled = isScreenReaderEnabled;
-
-		if (this.isScreenReaderEnabled) {
-			this.screenReaderOutput = '';
-		}
 	}
 
 	write(
@@ -77,14 +72,6 @@ export default class Output {
 		options: {transformers: OutputTransformer[]},
 	): void {
 		const {transformers} = options;
-
-		if (this.isScreenReaderEnabled) {
-			if (text) {
-				this.screenReaderOutput += text;
-			}
-
-			return;
-		}
 
 		if (!text) {
 			return;
@@ -113,13 +100,6 @@ export default class Output {
 	}
 
 	get(): {output: string; height: number} {
-		if (this.isScreenReaderEnabled) {
-			return {
-				output: this.screenReaderOutput,
-				height: this.screenReaderOutput.split('\n').length,
-			};
-		}
-
 		// Initialize output array with a specific set of rows, so that margin/padding at the bottom is preserved
 		const output: StyledChar[][] = [];
 
@@ -249,6 +229,20 @@ export default class Output {
 					offsetY++;
 				}
 			}
+		}
+
+		if (this.isScreenReaderEnabled) {
+			const screenReaderOutput = output
+				.map(line =>
+					// For each line, join the plain text value of each character.
+					line.map(char => char.value).join(''),
+				)
+				.join('\n');
+
+			return {
+				output: screenReaderOutput,
+				height: output.length,
+			};
 		}
 
 		const generatedOutput = output
