@@ -29,7 +29,7 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 
 export type OutputTransformer = (s: string, index: number) => string;
 
-export const renderNodeToScreenReaderOutput = (
+const renderNodeToScreenReaderOutput = (
 	node: DOMElement,
 	options: {skipStaticElements: boolean},
 ): string => {
@@ -95,6 +95,7 @@ const renderNodeToOutput = (
 		overrideY?: number;
 		transformers?: OutputTransformer[];
 		skipStaticElements: boolean;
+		isScreenReaderEnabled: boolean;
 	},
 ) => {
 	const {
@@ -102,7 +103,18 @@ const renderNodeToOutput = (
 		overrideY = 0,
 		transformers = [],
 		skipStaticElements,
+		isScreenReaderEnabled,
 	} = options;
+
+	if (isScreenReaderEnabled) {
+		const screenReaderOutput = renderNodeToScreenReaderOutput(node, {
+			skipStaticElements,
+		});
+
+		output.write(0, 0, screenReaderOutput, {transformers: []});
+		return;
+	}
+
 
 	if (skipStaticElements && node.internal_static) {
 		return;
@@ -153,9 +165,9 @@ const renderNodeToOutput = (
 			renderBackground(x, y, node, output);
 			renderBorder(x, y, node, output);
 
-			const clipHorizontally =
+			const clipHorizontally = 
 				node.style.overflowX === 'hidden' || node.style.overflow === 'hidden';
-			const clipVertically =
+			const clipVertically = 
 				node.style.overflowY === 'hidden' || node.style.overflow === 'hidden';
 
 			if (clipHorizontally || clipVertically) {
@@ -191,6 +203,7 @@ const renderNodeToOutput = (
 					overrideY: y,
 					transformers: newTransformers,
 					skipStaticElements,
+					isScreenReaderEnabled,
 				});
 			}
 
@@ -200,6 +213,5 @@ const renderNodeToOutput = (
 		}
 	}
 };
-
 
 export default renderNodeToOutput;
