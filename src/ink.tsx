@@ -168,6 +168,10 @@ export default class Ink {
 		// If <Static> output isn't empty, it means new children have been added to it
 		const hasStaticOutput = staticOutput && staticOutput !== '\n';
 
+		const isNewStaticOutput =
+			hasStaticOutput &&
+			(!this.isScreenReaderEnabled || staticOutput !== this.lastStaticOutput);
+
 		if (this.options.debug) {
 			if (hasStaticOutput) {
 				this.fullStaticOutput += staticOutput;
@@ -187,8 +191,9 @@ export default class Ink {
 			return;
 		}
 
-		if (hasStaticOutput) {
+		if (isNewStaticOutput) {
 			this.fullStaticOutput += staticOutput;
+			this.lastStaticOutput = staticOutput;
 		}
 
 		if (this.lastOutputHeight >= this.options.stdout.rows) {
@@ -202,13 +207,13 @@ export default class Ink {
 		}
 
 		// To ensure static output is cleanly rendered before main output, clear main output first
-		if (hasStaticOutput) {
+		if (isNewStaticOutput) {
 			this.log.clear();
 			this.options.stdout.write(staticOutput);
 			this.log(output);
 		}
 
-		if (!hasStaticOutput && output !== this.lastOutput) {
+		if (!isNewStaticOutput && output !== this.lastOutput) {
 			this.throttledLog(output);
 		}
 
