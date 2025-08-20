@@ -1,5 +1,4 @@
-import renderNodeToOutput,
-{
+import renderNodeToOutput, {
 	renderNodeToScreenReaderOutput,
 } from './render-node-to-output.js';
 import Output from './output.js';
@@ -23,7 +22,9 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 			let staticOutput = '';
 
 			if (node.staticNode) {
-				staticOutput = renderNodeToScreenReaderOutput(node.staticNode);
+				staticOutput = renderNodeToScreenReaderOutput(node.staticNode, {
+					skipStaticElements: false,
+				});
 			}
 
 			return {
