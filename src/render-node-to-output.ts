@@ -29,21 +29,18 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 
 export type OutputTransformer = (s: string, index: number) => string;
 
-const renderNodeToScreenReaderOutput = (
-	node: DOMElement,
-	output: Output,
-): void => {
+const renderNodeToScreenReaderOutput = (node: DOMElement): string => {
 	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
-		return;
+		return '';
 	}
 
-	let text = '';
+	let output = '';
 
 	if (node.internal_accessibility) {
 		const {role, state} = node.internal_accessibility;
 
 		if (role) {
-			text += `${role}: `;
+			output += `${role}: `; 
 		}
 
 		if (state) {
@@ -52,24 +49,35 @@ const renderNodeToScreenReaderOutput = (
 				.map(([key]) => `(${key})`);
 
 			if (states.length > 0) {
-				text += `${states.join(' ')} `;
+				output += `${states.join(' ')} `; 
 			}
 		}
 	}
 
 	if (node.nodeName === 'ink-text') {
-		text += squashTextNodes(node);
-		output.write(0, 0, text, {transformers: []});
-		return;
+		const text = squashTextNodes(node);
+		return output + text;
 	}
 
-	output.write(0, 0, text, {transformers: []});
+	const children = node.childNodes
+		.map(child => renderNodeToScreenReaderOutput(child as DOMElement))
+		.filter(Boolean);
 
 	if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
-		for (const childNode of node.childNodes) {
-			renderNodeToScreenReaderOutput(childNode as DOMElement, output);
-		}
+		const separator = 
+			node.style.flexDirection === 'column' ||
+			node.style.flexDirection === 'column-reverse'
+				? '\n'
+				: ' ';
+
+		// Filter out empty children to avoid leading/trailing separators
+		const nonEmptyChildren = children.filter(child => child.trim().length > 0);
+		output += nonEmptyChildren.join(separator);
+	} else {
+		output += children.join('');
 	}
+
+	return output;
 };
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
@@ -93,7 +101,8 @@ const renderNodeToOutput = (
 	} = options;
 
 	if (isScreenReaderEnabled) {
-		renderNodeToScreenReaderOutput(node, output);
+		const screenReaderOutput = renderNodeToScreenReaderOutput(node);
+		output.write(0, 0, screenReaderOutput, {transformers: []});
 		return;
 	}
 
@@ -146,9 +155,9 @@ const renderNodeToOutput = (
 			renderBackground(x, y, node, output);
 			renderBorder(x, y, node, output);
 
-			const clipHorizontally =
+			const clipHorizontally = 
 				node.style.overflowX === 'hidden' || node.style.overflow === 'hidden';
-			const clipVertically =
+			const clipVertically = 
 				node.style.overflowY === 'hidden' || node.style.overflow === 'hidden';
 
 			if (clipHorizontally || clipVertically) {

@@ -53,14 +53,17 @@ type UnclipOperation = {
 export default class Output {
 	width: number;
 	height: number;
+	isScreenReaderEnabled: boolean;
+	screenReaderOutput = '';
 
 	private readonly operations: Operation[] = [];
 
 	constructor(options: Options) {
-		const {width, height} = options;
+		const {width, height, isScreenReaderEnabled = false} = options;
 
 		this.width = width;
 		this.height = height;
+		this.isScreenReaderEnabled = isScreenReaderEnabled;
 	}
 
 	write(
@@ -70,6 +73,14 @@ export default class Output {
 		options: {transformers: OutputTransformer[]},
 	): void {
 		const {transformers} = options;
+
+		if (this.isScreenReaderEnabled) {
+			if (text) {
+				this.screenReaderOutput += text;
+			}
+
+			return;
+		}
 
 		if (!text) {
 			return;
@@ -98,6 +109,13 @@ export default class Output {
 	}
 
 	get(): {output: string; height: number} {
+		if (this.isScreenReaderEnabled) {
+			return {
+				output: this.screenReaderOutput,
+				height: this.screenReaderOutput.split('\n').length,
+			};
+		}
+
 		// Initialize output array with a specific set of rows, so that margin/padding at the bottom is preserved
 		const output: StyledChar[][] = [];
 
