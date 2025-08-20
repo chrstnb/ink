@@ -169,27 +169,8 @@ export default class Ink {
 		// If <Static> output isn't empty, it means new children have been added to it
 		const hasStaticOutput = staticOutput && staticOutput !== '\n';
 
-		if (hasStaticOutput) {
-			this.fullStaticOutput += staticOutput;
-		}
-
-		if (this.options.debug) {
-			this.options.stdout.write(this.fullStaticOutput + output);
-			return;
-		}
-
-		if (isInCi) {
-			if (hasStaticOutput) {
-				this.options.stdout.write(staticOutput);
-			}
-
-			this.lastOutput = output;
-			this.lastOutputHeight = outputHeight;
-			return;
-		}
-
 		if (this.isScreenReaderEnabled) {
-			const fullOutput = this.fullStaticOutput + output;
+			const fullOutput = staticOutput + output;
 
 			if (fullOutput === this.lastOutput) {
 				return;
@@ -212,6 +193,25 @@ export default class Ink {
 			this.lastOutput = fullOutput;
 			this.lastOutputHeight =
 				wrappedOutput === '' ? 0 : wrappedOutput.split('\n').length;
+			return;
+		}
+
+		if (hasStaticOutput) {
+			this.fullStaticOutput += staticOutput;
+		}
+
+		if (this.options.debug) {
+			this.options.stdout.write(this.fullStaticOutput + output);
+			return;
+		}
+
+		if (isInCi) {
+			if (hasStaticOutput) {
+				this.options.stdout.write(staticOutput);
+			}
+
+			this.lastOutput = output;
+			this.lastOutputHeight = outputHeight;
 			return;
 		}
 
