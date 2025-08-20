@@ -64,6 +64,10 @@ export default class Output {
 		this.width = width;
 		this.height = height;
 		this.isScreenReaderEnabled = isScreenReaderEnabled;
+
+		if (this.isScreenReaderEnabled) {
+			this.screenReaderOutput = '';
+		}
 	}
 
 	write(
