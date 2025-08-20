@@ -21,6 +21,7 @@ import {type OutputTransformer} from './render-node-to-output.js';
 type Options = {
 	width: number;
 	height: number;
+	isScreenReaderEnabled?: boolean;
 };
 
 type Operation = WriteOperation | ClipOperation | UnclipOperation;

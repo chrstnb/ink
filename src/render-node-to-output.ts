@@ -29,68 +29,47 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 
 export type OutputTransformer = (s: string, index: number) => string;
 
-const buildScreenReaderOutput = (
+const renderNodeToScreenReaderOutput = (
 	node: DOMElement,
-	options: {
-		parentRole?: string;
-	} = {},
-): string => {
+	output: Output,
+): void => {
 	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
-		return '';
+		return;
 	}
 
-	let output = '';
-
-	if (node.nodeName === 'ink-text') {
-		output = squashTextNodes(node);
-	} else if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
-		const separator =
-			node.style.flexDirection === 'row' ||
-			node.style.flexDirection === 'row-reverse'
-				? ' '
-				: '\n';
-
-		const childNodes =
-			node.style.flexDirection === 'row-reverse' ||
-			node.style.flexDirection === 'column-reverse'
-				? [...node.childNodes].reverse()
-				: [...node.childNodes];
-
-		output = childNodes
-			.map(childNode => {
-				const screenReaderOutput = buildScreenReaderOutput(
-					childNode as DOMElement,
-					{
-						parentRole: node.internal_accessibility?.role,
-					},
-				);
-
-				// When a text node contains multiple lines, it's still a single text node.
-				// We need to split it into lines and then join them with the separator.
-				return screenReaderOutput.split('\n').join(separator);
-			})
-			.filter(Boolean)
-			.join(separator);
-	}
+	let text = '';
 
 	if (node.internal_accessibility) {
 		const {role, state} = node.internal_accessibility;
 
-		if (state) {
-			const stateKeys = Object.keys(state) as Array<keyof typeof state>;
-			const stateDescription = stateKeys.filter(key => state[key]).join(', ');
-
-			if (stateDescription) {
-				output = `(${stateDescription}) ${output}`;
-			}
+		if (role) {
+			text += `${role}: `;
 		}
 
-		if (role && role !== options.parentRole) {
-			output = `${role}: ${output}`;
+		if (state) {
+			const states = Object.entries(state)
+				.filter(([, value]) => value)
+				.map(([key]) => `(${key})`);
+
+			if (states.length > 0) {
+				text += `${states.join(' ')} `;
+			}
 		}
 	}
 
-	return output;
+	if (node.nodeName === 'ink-text') {
+		text += squashTextNodes(node);
+		output.write(0, 0, text, {transformers: []});
+		return;
+	}
+
+	output.write(0, 0, text, {transformers: []});
+
+	if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
+		for (const childNode of node.childNodes) {
+			renderNodeToScreenReaderOutput(childNode as DOMElement, output);
+		}
+	}
 };
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
@@ -98,27 +77,23 @@ const renderNodeToOutput = (
 	node: DOMElement,
 	output: Output,
 	options: {
-		offsetX?: number;
-		offsetY?: number;
+		override?: number;
+		overrideY?: number;
 		transformers?: OutputTransformer[];
 		skipStaticElements: boolean;
 		isScreenReaderEnabled: boolean;
 	},
 ) => {
 	const {
-		offsetX = 0,
-		offsetY = 0,
+		override = 0,
+		overrideY = 0,
 		transformers = [],
 		skipStaticElements,
 		isScreenReaderEnabled,
 	} = options;
 
 	if (isScreenReaderEnabled) {
-		const screenReaderOutput = buildScreenReaderOutput(node);
-		if (screenReaderOutput) {
-			output.write(0, 0, screenReaderOutput, {transformers: []});
-		}
-
+		renderNodeToScreenReaderOutput(node, output);
 		return;
 	}
 
@@ -134,8 +109,8 @@ const renderNodeToOutput = (
 		}
 
 		// Left and top positions in Yoga are relative to their parent node
-		const x = offsetX + yogaNode.getComputedLeft();
-		const y = offsetY + yogaNode.getComputedTop();
+		const x = override + yogaNode.getComputedLeft();
+		const y = overrideY + yogaNode.getComputedTop();
 
 		// Transformers are functions that transform final text output of each component
 		// See Output class for logic that applies transformers
@@ -205,8 +180,8 @@ const renderNodeToOutput = (
 		if (node.nodeName === 'ink-root' || node.nodeName === 'ink-box') {
 			for (const childNode of node.childNodes) {
 				renderNodeToOutput(childNode as DOMElement, output, {
-					offsetX: x,
-					offsetY: y,
+					override: x,
+					overrideY: y,
 					transformers: newTransformers,
 					skipStaticElements,
 					isScreenReaderEnabled,

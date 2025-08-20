@@ -13,6 +13,7 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 		const output = new Output({
 			width: node.yogaNode.getComputedWidth(),
 			height: node.yogaNode.getComputedHeight(),
+			isScreenReaderEnabled,
 		});
 
 		renderNodeToOutput(node, output, {
@@ -26,6 +27,7 @@ const renderer = (node: DOMElement, isScreenReaderEnabled: boolean): Result => {
 			staticOutput = new Output({
 				width: node.staticNode.yogaNode.getComputedWidth(),
 				height: node.staticNode.yogaNode.getComputedHeight(),
+				isScreenReaderEnabled,
 			});
 
 			renderNodeToOutput(node.staticNode, staticOutput, {
