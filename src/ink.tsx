@@ -168,13 +168,8 @@ export default class Ink {
 		// If <Static> output isn't empty, it means new children have been added to it
 		const hasStaticOutput = staticOutput && staticOutput !== '\n';
 
-		// In screen reader mode, renderer returns the full static output, so we shouldn't append to it
 		if (hasStaticOutput) {
-			if (this.isScreenReaderEnabled) {
-				this.fullStaticOutput += staticOutput;
-			} else {
-				this.fullStaticOutput += staticOutput;
-			}
+			this.fullStaticOutput += staticOutput;
 		}
 
 		if (this.options.debug) {

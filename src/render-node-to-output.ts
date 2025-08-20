@@ -70,19 +70,7 @@ const getScreenReaderOutput = (() => {
 			return output + text;
 		}
 
-		// In screen reader mode, the reconciler just appends all children to the static node
-		// on each render. This is a workaround to only render new static children
-		// since the last render.
-		const childNodes = 
-			node.internal_static && !options.skipStaticElements
-				? node.childNodes.slice(previousStaticChildCount)
-				: node.childNodes;
-
-		if (node.internal_static && !options.skipStaticElements) {
-			previousStaticChildCount = node.childNodes.length;
-		}
-
-		const children = childNodes.map(child =>
+		const children = node.childNodes.map(child =>
 			getScreenReaderOutput(child as DOMElement, options),
 		);
 
