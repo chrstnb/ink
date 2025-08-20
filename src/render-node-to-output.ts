@@ -29,27 +29,40 @@ const applyPaddingToText = (node: DOMElement, text: string): string => {
 
 export type OutputTransformer = (s: string, index: number) => string;
 
-const getScreenReaderOutput = (() => {
-	return (
-		node: DOMElement,
-			options: {
-				skipStaticElements: boolean;
-			},
-	): string => {
-		if (
-			node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE ||
-					(options.skipStaticElements && node.internal_static)
-		) {
-			return '';
-		}
+interface ScreenReaderTextFragment {
+	x: number;
+	y: number;
+	value: string;
+}
 
-		let output = '';
+const buildScreenReaderOutput = (
+	node: DOMElement,
+	options: {
+		offsetX?: number;
+		offsetY?: number;
+	},
+	fragments: ScreenReaderTextFragment[],
+) => {
+	if (node.yogaNode?.getDisplay() === Yoga.DISPLAY_NONE) {
+		return;
+	}
 
-		if (node.internal_accessibility) {
-			const {role, state} = node.internal_accessibility;
+	const {offsetX = 0, offsetY = 0} = options;
+
+	const {yogaNode} = node;
+	if (!yogaNode) {
+		return;
+	}
+
+	const x = offsetX + yogaNode.getComputedLeft();
+	const y = offsetY + yogaNode.getComputedTop();
+
+	let text = '';
+	if (node.internal_accessibility) {
+		const {role, state} = node.internal_accessibility;
 
 			if (role) {
-				output += `${role}: `; 
+				text += `${role}: `; 
 			}
 
 			if (state) {
@@ -58,49 +71,95 @@ const getScreenReaderOutput = (() => {
 					.map(([key]) => `(${key})`);
 
 				if (states.length > 0) {
-					output += `${states.join(' ')} `; 
+					text += `${states.join(' ')} `; 
+				}
+			}
+	}
+
+	if (node.nodeName === 'ink-text') {
+		text += squashTextNodes(node);
+		if (text.length > 0) {
+			fragments.push({x, y, value: text});
+		}
+
+		return;
+	}
+
+	if (text.length > 0) {
+		fragments.push({x, y, value: text});
+	}
+
+	if (node.nodeName === 'ink-root' || node.nodeName === 'ink-box') {
+		for (const childNode of node.childNodes) {
+			buildScreenReaderOutput(
+				childNode as DOMElement,
+				{
+					offsetX: x,
+					offsetY: y,
+				},
+				fragments,
+			);
+		}
+	}
+};
+
+const getScreenReaderOutput = (
+	node: DOMElement,
+	options: {
+		skipStaticElements: boolean;
+	},
+): string => {
+	if (options.skipStaticElements && node.internal_static) {
+		return '';
+	}
+
+	const fragments: ScreenReaderTextFragment[] = [];
+	buildScreenReaderOutput(node, {}, fragments);
+
+	fragments.sort((a, b) => {
+		if (a.y !== b.y) {
+			return a.y - b.y;
+		}
+
+		return a.x - b.x;
+	});
+
+	let output = '';
+	let lastY = -1;
+
+	for (const fragment of fragments) {
+		if (lastY !== -1) {
+			if (fragment.y > lastY) {
+				output += '\n'.repeat(fragment.y - lastY);
+			} else if (fragment.y === lastY) {
+				if (
+					output.length > 0 &&
+					!output.endsWith(' ')
+					&& !output.endsWith('\n')
+				) {
+					output += ' ';
 				}
 			}
 		}
 
-		if (node.nodeName === 'ink-text') {
-			const text = squashTextNodes(node);
-			return text;
-		}
-
-		const children = node.childNodes.map(child =>
-			getScreenReaderOutput(child as DOMElement, options),
-		);
-
-		if (node.nodeName === 'ink-box' || node.nodeName === 'ink-root') {
-			const separator =
-				node.style.flexDirection === 'column' ||
-				node.style.flexDirection === 'column-reverse'
-					? '\n'
-					: ' ';
-
-			// Filter out empty children to avoid leading/trailing separators
-			const nonEmptyChildren = children.filter(child => child.trim().length > 0);
-			output += nonEmptyChildren.join(separator);
-		} else {
-			output += children.join('');
-		}
-
-		return output;
+		output += fragment.value;
+		lastY = fragment.y;
 	}
-})();
+
+	return output;
+};
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
 const renderNodeToOutput = (
 	node: DOMElement,
-		output: Output,
-		options: {
-			override?: number;
-			overrideY?: number;
-			transformers?: OutputTransformer[];
-			skipStaticElements: boolean;
-			isScreenReaderEnabled: boolean;
-		},
+	output: Output,
+	options: {
+		override?: number;
+		overrideY?: number;
+		transformers?: OutputTransformer[];
+		skipStaticElements: boolean;
+		isScreenReaderEnabled: boolean;
+	},
 ) => {
 	const {
 		override = 0,
@@ -118,8 +177,6 @@ const renderNodeToOutput = (
 		output.write(0, 0, screenReaderOutput, {transformers: []});
 		return;
 	}
-
-
 
 	if (skipStaticElements && node.internal_static) {
 		return;
