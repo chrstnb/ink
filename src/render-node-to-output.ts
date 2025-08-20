@@ -70,15 +70,6 @@ const getScreenReaderOutput = (() => {
 			return output + text;
 		}
 
-		
-		if (
-			node.internal_static &&
-			!options.skipStaticElements &&
-			node.childNodes.length < previousStaticChildCount
-		) {
-			previousStaticChildCount = 0;
-		}
-
 		// In screen reader mode, the reconciler just appends all children to the static node
 		// on each render. This is a workaround to only render new static children
 		// since the last render.
@@ -110,7 +101,7 @@ const getScreenReaderOutput = (() => {
 		}
 
 		return output;
-	};
+	}
 })();
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
